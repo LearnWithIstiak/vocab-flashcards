@@ -10,7 +10,7 @@ function App() {
   const [flipped, setFlipped] = useState(false);
 
   useEffect(() => {
-    fetch('/vocab-data.json')
+    fetch(process.env.PUBLIC_URL + '/vocab-data.json')
       .then(res => res.json())
       .then(data => {
         const groupWords = data.filter(w => w.group === group);
