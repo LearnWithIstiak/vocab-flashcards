@@ -1,0 +1,36 @@
+[
+  {
+    "key": 0,
+    "group": 1,
+    "word": "abound",
+    "definitions": [
+      {
+        "part_of_speech": "verb",
+        "definition": "be present in large quantities",
+        "sentence": "Wildfires <u>abound</u> in the lush green meadows of the valley.",
+        "synonyms": [
+          "proliferate",
+          "thrive",
+          "flourish"
+        ]
+      }
+    ]
+  },
+  {
+    "key": 1,
+    "group": 1,
+    "word": "amorphous",
+    "definitions": [
+      {
+        "part_of_speech": "adjective",
+        "definition": "lacking structure; unclear",
+        "sentence": "His plans for the future were still <u>amorphous</u>, changing every few weeks.",
+        "synonyms": [
+          "shapeless",
+          "indefinite",
+          "vague"
+        ]
+      }
+    ]
+  }
+]
