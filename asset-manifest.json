@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/vocab-flashcards/static/css/main.631cdf46.css",
+    "main.js": "/vocab-flashcards/static/js/main.f8f2ff96.js",
+    "index.html": "/vocab-flashcards/index.html",
+    "main.631cdf46.css.map": "/vocab-flashcards/static/css/main.631cdf46.css.map",
+    "main.f8f2ff96.js.map": "/vocab-flashcards/static/js/main.f8f2ff96.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.631cdf46.css",
+    "static/js/main.f8f2ff96.js"
+  ]
+}
