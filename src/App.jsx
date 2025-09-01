@@ -50,14 +50,16 @@ export default function App() {
   const { data, error, loading } = useVocabData();
   const [currentGroup, setCurrentGroup] = useState(null);
   const [idx, setIdx] = useState(0);
-  const [showMeaning, setShowMeaning] = useState(false);
+  const [revealed, setRevealed] = useState(false);
   const [shuffledItems, setShuffledItems] = useState([]);
 
   const { groupsMap, groupNumbers } = useMemo(() => {
     if (!data) return { groupsMap: {}, groupNumbers: [] };
     const sorted = [...data].sort((a, b) => a.key - b.key);
     const gmap = groupBy(sorted, "group");
-    const gnums = Object.keys(gmap).map(Number).sort((a, b) => a - b);
+    const gnums = Object.keys(gmap)
+      .map(Number)
+      .sort((a, b) => a - b);
     return { groupsMap: gmap, groupNumbers: gnums };
   }, [data]);
 
@@ -74,25 +76,23 @@ export default function App() {
   function resetToGroups() {
     setCurrentGroup(null);
     setIdx(0);
-    setShowMeaning(false);
+    setRevealed(false);
     setShuffledItems([]);
   }
 
   function goPrev() {
     setIdx((i) => Math.max(0, i - 1));
-    setShowMeaning(false);
+    setRevealed(false);
   }
-
   function goNext() {
     setIdx((i) => Math.min(total - 1, i + 1));
-    setShowMeaning(false);
+    setRevealed(false);
   }
-
   function shuffleGroup() {
     if (groupsMap[currentGroup]) {
       setShuffledItems(shuffleArray(groupsMap[currentGroup]));
       setIdx(0);
-      setShowMeaning(false);
+      setRevealed(false);
     }
   }
 
@@ -103,7 +103,7 @@ export default function App() {
       if (e.key === "ArrowLeft") goPrev();
       if (e.key === " ") {
         e.preventDefault();
-        setShowMeaning((m) => !m);
+        setRevealed((r) => !r);
       }
       if (e.key === "Escape") resetToGroups();
     }
@@ -127,11 +127,14 @@ export default function App() {
         </div>
       </header>
 
+      {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 py-6">
         {loading && <div className="text-gray-600">Loading…</div>}
-        {!loading && !data && <div className="text-red-600">{error || "No data loaded."}</div>}
+        {!loading && !data && (
+          <div className="text-red-600">{error || "No data loaded."}</div>
+        )}
 
-        {/* Group Selection */}
+        {/* Group selection */}
         {!loading && data && currentGroup == null && (
           <div>
             <h2 className="text-lg font-semibold mb-4">Select a Group</h2>
@@ -142,7 +145,7 @@ export default function App() {
                   onClick={() => {
                     setCurrentGroup(g);
                     setIdx(0);
-                    setShowMeaning(false);
+                    setRevealed(false);
                     setShuffledItems([]);
                   }}
                   className="h-32 w-full rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-teal-400
@@ -160,7 +163,7 @@ export default function App() {
           </div>
         )}
 
-        {/* Flashcard View */}
+        {/* Flashcard view */}
         {data && currentGroup != null && (
           <div>
             <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -181,25 +184,43 @@ export default function App() {
               </div>
             </div>
 
-            {/* Word Display */}
-            <div className="text-center text-5xl font-bold mb-4 text-indigo-800">
-              {current?.word}
-            </div>
-
-            {/* Flashcard for Meaning */}
+            {/* Flashcard with flip */}
             <div
-              onClick={() => setShowMeaning((m) => !m)}
-              className="cursor-pointer select-none mx-auto flex items-center justify-center
-                         w-80 h-80 sm:w-96 sm:h-96 lg:w-[28rem] lg:h-[28rem]
-                         rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-500 to-teal-400
-                         text-white shadow-xl hover:shadow-2xl transition-transform duration-200 hover:scale-105 p-6"
+              onClick={() => setRevealed((r) => !r)}
+              className="relative mx-auto w-72 h-72 sm:w-96 sm:h-96 lg:w-[28rem] lg:h-[28rem]
+                         perspective"
             >
-              {showMeaning && current && (
-                <div className="w-full h-full overflow-y-auto text-left text-lg bg-white/90 text-gray-900 rounded-xl p-4 shadow-inner">
-                  {current.definitions?.map((d, i) => (
-                    <div key={i} className="mb-4">
-                      <div className="text-xs uppercase text-indigo-600 font-semibold">{d.part_of_speech}</div>
-                      <div className="mt-1">{d.definition}</div>
+              <div
+                className={`absolute w-full h-full rounded-3xl shadow-xl transform-style-preserve-3d transition-transform duration-700 ${
+                  revealed ? "rotate-y-180" : ""
+                }`}
+              >
+                {/* Front (word) */}
+                <div className="absolute w-full h-full rounded-3xl flex items-center justify-center
+                                bg-gradient-to-br from-indigo-500 via-purple-500 to-teal-400 text-white backface-hidden">
+                  {!current ? (
+                    <div className="text-gray-200">No items</div>
+                  ) : (
+                    <div className="text-center px-4">
+                      <div className="text-4xl sm:text-5xl lg:text-6xl font-bold">
+                        {current.word}
+                      </div>
+                      <div className="mt-2 text-sm opacity-80">
+                        Click to reveal meaning
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Back (meaning) */}
+                <div className="absolute w-full h-full rounded-3xl bg-white/90 text-gray-900 p-4
+                                overflow-y-auto backface-hidden transform rotate-y-180">
+                  {current?.definitions?.map((d, i) => (
+                    <div key={i} className="mb-3">
+                      <div className="text-xs uppercase text-indigo-600 font-semibold">
+                        {d.part_of_speech}
+                      </div>
+                      <div className="mt-1 font-medium">{d.definition}</div>
                       {d.sentence && (
                         <div
                           className="mt-1 text-gray-700 italic"
@@ -208,17 +229,17 @@ export default function App() {
                       )}
                       {!!d.synonyms?.length && (
                         <div className="mt-1 text-xs text-gray-600">
-                          <span className="font-semibold">Synonyms:</span> {d.synonyms.join(", ")}
+                          <span className="font-semibold">Synonyms:</span>{" "}
+                          {d.synonyms.join(", ")}
                         </div>
                       )}
                     </div>
                   ))}
                 </div>
-              )}
-              {!showMeaning && <div className="text-white/50 text-xl">Click to view meaning</div>}
+              </div>
             </div>
 
-            {/* Navigation Buttons */}
+            {/* Navigation buttons */}
             <div className="mt-6 flex items-center justify-between gap-3">
               <button
                 onClick={goPrev}
@@ -230,11 +251,24 @@ export default function App() {
                 ← Previous
               </button>
               <button
-                onClick={() => setShowMeaning((m) => !m)}
+                onClick={() => setRevealed((r) => !r)}
                 className="px-4 py-2 rounded-xl border shadow-sm bg-white hover:bg-gray-50"
               >
-                {showMeaning ? "Hide Meaning" : "Show Meaning"}
+                {revealed ? "Show Word" : "Show Meaning"}
               </button>
               <button
                 onClick={goNext}
-                disabled={idx >= total -
+                disabled={idx >= total - 1}
+                className={`px-4 py-2 rounded-xl border shadow-sm bg-white hover:bg-gray-50 ${
+                  idx >= total - 1 ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
