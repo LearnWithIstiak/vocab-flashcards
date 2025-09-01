@@ -1,9 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-// ---- Types ----
-// @typedef {{ part_of_speech: string, definition: string, sentence?: string, synonyms?: string[] }} Definition
-// @typedef {{ key: number, group: number, word: string, definitions: Definition[] }} VocabItem
-
 function groupBy(items, key) {
   return items.reduce((acc, item) => {
     const k = item[key];
@@ -41,11 +37,22 @@ function useVocabData() {
   return { data, error, loading };
 }
 
+// Shuffle utility
+function shuffleArray(arr) {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
 export default function App() {
   const { data, error, loading } = useVocabData();
   const [currentGroup, setCurrentGroup] = useState(null);
   const [idx, setIdx] = useState(0);
   const [revealed, setRevealed] = useState(false);
+  const [shuffledItems, setShuffledItems] = useState([]);
 
   const { groupsMap, groupNumbers } = useMemo(() => {
     if (!data) return { groupsMap: {}, groupNumbers: [] };
@@ -59,8 +66,10 @@ export default function App() {
 
   const groupItems = useMemo(() => {
     if (currentGroup == null || !groupsMap[currentGroup]) return [];
-    return [...groupsMap[currentGroup]].sort((a, b) => a.key - b.key);
-  }, [currentGroup, groupsMap]);
+    return shuffledItems.length > 0
+      ? shuffledItems
+      : [...groupsMap[currentGroup]].sort((a, b) => a.key - b.key);
+  }, [currentGroup, groupsMap, shuffledItems]);
 
   const total = groupItems.length;
   const current = total > 0 ? groupItems[idx] : null;
@@ -69,6 +78,7 @@ export default function App() {
     setCurrentGroup(null);
     setIdx(0);
     setRevealed(false);
+    setShuffledItems([]);
   }
 
   function goPrev() {
@@ -78,6 +88,13 @@ export default function App() {
   function goNext() {
     setIdx((i) => Math.min(total - 1, i + 1));
     setRevealed(false);
+  }
+  function shuffleGroup() {
+    if (groupsMap[currentGroup]) {
+      setShuffledItems(shuffleArray(groupsMap[currentGroup]));
+      setIdx(0);
+      setRevealed(false);
+    }
   }
 
   useEffect(() => {
@@ -97,6 +114,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
+      {/* Header */}
       <header className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-gray-200 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center">
           <div className="text-xl font-bold tracking-tight text-indigo-700">
@@ -110,6 +128,7 @@ export default function App() {
         </div>
       </header>
 
+      {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 py-6">
         {loading && <div className="text-gray-600">Loading…</div>}
         {!loading && !data && (
@@ -120,7 +139,7 @@ export default function App() {
         {!loading && data && currentGroup == null && (
           <div>
             <h2 className="text-lg font-semibold mb-4">Select a Group</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {groupNumbers.map((g) => (
                 <button
                   key={g}
@@ -128,12 +147,15 @@ export default function App() {
                     setCurrentGroup(g);
                     setIdx(0);
                     setRevealed(false);
+                    setShuffledItems([]);
                   }}
-                  className="group rounded-2xl border bg-white p-4 text-left shadow-sm hover:shadow transition"
+                  className="h-32 w-full rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-teal-400
+                             text-white shadow-md hover:shadow-xl transition-transform hover:scale-105
+                             flex flex-col items-center justify-center font-semibold"
                 >
-                  <div className="text-sm text-gray-500">Group</div>
-                  <div className="text-2xl font-semibold">{g}</div>
-                  <div className="mt-2 text-xs text-gray-500">
+                  <div className="text-sm opacity-80">Group</div>
+                  <div className="text-3xl">{g}</div>
+                  <div className="mt-1 text-xs opacity-70">
                     {groupsMap[g]?.length || 0} words
                   </div>
                 </button>
@@ -145,46 +167,57 @@ export default function App() {
         {/* Flashcard view */}
         {data && currentGroup != null && (
           <div>
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex flex-wrap items-center gap-3 mb-4">
               <button
                 onClick={resetToGroups}
                 className="text-sm px-3 py-1.5 border rounded-xl bg-white hover:bg-gray-50"
               >
                 ← All Groups
               </button>
+              <button
+                onClick={shuffleGroup}
+                className="text-sm px-3 py-1.5 border rounded-xl bg-white hover:bg-gray-50"
+              >
+                🔀 Shuffle Group
+              </button>
               <div className="text-sm text-gray-600">
                 Group {currentGroup} • {idx + 1} / {total}
               </div>
             </div>
 
+            {/* Flashcard */}
             <div
               onClick={() => setRevealed((r) => !r)}
               className="cursor-pointer select-none mx-auto flex items-center justify-center
-                         w-80 h-80 rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-500 to-teal-400
+                         w-56 h-56 sm:w-72 sm:h-72 lg:w-88 lg:h-88
+                         rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-500 to-teal-400
                          text-white shadow-xl hover:shadow-2xl transition-transform duration-200 hover:scale-105"
             >
               {!current ? (
                 <div className="text-gray-200">No items</div>
               ) : (
-                <div className="text-center px-4">
-                  <div className="text-3xl md:text-4xl font-bold">
+                <div className="text-center px-4 w-full h-full flex flex-col justify-center">
+                  {/* Word */}
+                  <div className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">
                     {current.word}
                   </div>
-                  <div className="mt-2 text-sm opacity-80">
+                  <div className="text-sm opacity-80">
                     {revealed ? "Click to hide" : "Click to reveal"}
                   </div>
 
+                  {/* Definition Box */}
                   {revealed && (
-                    <div className="mt-4 bg-white/90 text-gray-900 rounded-xl p-4 shadow-inner">
+                    <div className="mt-4 bg-white/90 text-gray-900 rounded-xl p-3 shadow-inner
+                                    max-h-28 sm:max-h-36 lg:max-h-48 overflow-y-auto text-left text-sm sm:text-base">
                       {current.definitions?.map((d, i) => (
                         <div key={i} className="mb-3">
-                          <div className="text-xs uppercase text-indigo-600">
+                          <div className="text-xs uppercase text-indigo-600 font-semibold">
                             {d.part_of_speech}
                           </div>
-                          <div className="mt-1 font-medium">{d.definition}</div>
+                          <div className="mt-1">{d.definition}</div>
                           {d.sentence && (
                             <div
-                              className="mt-1 text-sm text-gray-700"
+                              className="mt-1 text-gray-700 italic"
                               dangerouslySetInnerHTML={{ __html: d.sentence }}
                             />
                           )}
@@ -202,6 +235,7 @@ export default function App() {
               )}
             </div>
 
+            {/* Navigation buttons */}
             <div className="mt-6 flex items-center justify-between gap-3">
               <button
                 onClick={goPrev}
