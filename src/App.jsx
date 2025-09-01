@@ -184,59 +184,54 @@ export default function App() {
               </div>
             </div>
 
-            {/* Flashcard with flip */}
+            {/* Flashcard */}
             <div
               onClick={() => setRevealed((r) => !r)}
-              className="relative mx-auto w-72 h-72 sm:w-96 sm:h-96 lg:w-[28rem] lg:h-[28rem]
-                         perspective"
+              className="cursor-pointer select-none mx-auto flex items-center justify-center
+                         w-72 h-72 sm:w-96 sm:h-96 lg:w-[28rem] lg:h-[28rem]
+                         rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-500 to-teal-400
+                         text-white shadow-xl hover:shadow-2xl transition-transform duration-200 hover:scale-105"
             >
-              <div
-                className={`absolute w-full h-full rounded-3xl shadow-xl transform-style-preserve-3d transition-transform duration-700 ${
-                  revealed ? "rotate-y-180" : ""
-                }`}
-              >
-                {/* Front (word) */}
-                <div className="absolute w-full h-full rounded-3xl flex items-center justify-center
-                                bg-gradient-to-br from-indigo-500 via-purple-500 to-teal-400 text-white backface-hidden">
-                  {!current ? (
-                    <div className="text-gray-200">No items</div>
-                  ) : (
-                    <div className="text-center px-4">
-                      <div className="text-4xl sm:text-5xl lg:text-6xl font-bold">
-                        {current.word}
-                      </div>
-                      <div className="mt-2 text-sm opacity-80">
-                        Click to reveal meaning
-                      </div>
-                    </div>
-                  )}
+              {!current ? (
+                <div className="text-gray-200">No items</div>
+              ) : !revealed ? (
+                // Show only the word before click
+                <div className="text-center px-4">
+                  <div className="text-4xl sm:text-5xl lg:text-6xl font-bold">
+                    {current.word}
+                  </div>
+                  <div className="mt-2 text-sm opacity-80">
+                    Click to reveal meaning
+                  </div>
                 </div>
-
-                {/* Back (meaning) */}
-                <div className="absolute w-full h-full rounded-3xl bg-white/90 text-gray-900 p-4
-                                overflow-y-auto backface-hidden transform rotate-y-180">
-                  {current?.definitions?.map((d, i) => (
-                    <div key={i} className="mb-3">
-                      <div className="text-xs uppercase text-indigo-600 font-semibold">
-                        {d.part_of_speech}
-                      </div>
-                      <div className="mt-1 font-medium">{d.definition}</div>
-                      {d.sentence && (
-                        <div
-                          className="mt-1 text-gray-700 italic"
-                          dangerouslySetInnerHTML={{ __html: d.sentence }}
-                        />
-                      )}
-                      {!!d.synonyms?.length && (
-                        <div className="mt-1 text-xs text-gray-600">
-                          <span className="font-semibold">Synonyms:</span>{" "}
-                          {d.synonyms.join(", ")}
+              ) : (
+                // Show meaning after click
+                <div className="text-left px-4 w-full h-full flex flex-col justify-center">
+                  <div className="bg-white/90 text-gray-900 rounded-xl p-4 shadow-inner
+                                  max-h-56 sm:max-h-72 lg:max-h-96 overflow-y-auto text-sm sm:text-base">
+                    {current.definitions?.map((d, i) => (
+                      <div key={i} className="mb-3">
+                        <div className="text-xs uppercase text-indigo-600 font-semibold">
+                          {d.part_of_speech}
                         </div>
-                      )}
-                    </div>
-                  ))}
+                        <div className="mt-1 font-medium">{d.definition}</div>
+                        {d.sentence && (
+                          <div
+                            className="mt-1 text-gray-700 italic"
+                            dangerouslySetInnerHTML={{ __html: d.sentence }}
+                          />
+                        )}
+                        {!!d.synonyms?.length && (
+                          <div className="mt-1 text-xs text-gray-600">
+                            <span className="font-semibold">Synonyms:</span>{" "}
+                            {d.synonyms.join(", ")}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Navigation buttons */}
