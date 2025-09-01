@@ -1,53 +1,236 @@
-// Remove Upload JSON UI from header
-<header className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-gray-200 shadow-sm">
-  <div className="max-w-6xl mx-auto px-4 py-3 flex items-center">
-    <div className="text-xl font-bold tracking-tight text-indigo-700">
-      Vocab Flashcards
-    </div>
-    {data && (
-      <span className="ml-auto text-xs text-gray-500">
-        {data.length.toLocaleString()} words • {groupNumbers.length} groups
-      </span>
-    )}
-  </div>
-</header>
+import React, { useEffect, useMemo, useState } from "react";
 
-// Flashcard view
-<div
-  onClick={() => setRevealed(r => !r)}
-  className="cursor-pointer select-none mx-auto flex items-center justify-center
-             w-80 h-80 rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-500 to-teal-400
-             text-white shadow-xl hover:shadow-2xl transition-transform duration-200 hover:scale-105"
->
-  {!current ? (
-    <div className="text-gray-200">No items in this group.</div>
-  ) : (
-    <div className="text-center px-4">
-      <div className="text-3xl md:text-4xl font-bold">{current.word}</div>
-      <div className="mt-2 text-sm opacity-80">
-        {revealed ? "Click to hide" : "Click to reveal"}
-      </div>
+// ---- Types ----
+// @typedef {{ part_of_speech: string, definition: string, sentence?: string, synonyms?: string[] }} Definition
+// @typedef {{ key: number, group: number, word: string, definitions: Definition[] }} VocabItem
 
-      {revealed && (
-        <div className="mt-4 bg-white/90 text-gray-900 rounded-xl p-4 shadow-inner">
-          {current.definitions?.map((d, i) => (
-            <div key={i} className="mb-3">
-              <div className="text-xs uppercase text-indigo-600">{d.part_of_speech}</div>
-              <div className="mt-1 font-medium">{d.definition}</div>
-              {d.sentence && (
-                <div className="mt-1 text-sm text-gray-700">
-                  <span dangerouslySetInnerHTML={{ __html: d.sentence }} />
-                </div>
-              )}
-              {!!d.synonyms?.length && (
-                <div className="mt-1 text-xs text-gray-600">
-                  <span className="font-semibold">Synonyms:</span> {d.synonyms.join(", ")}
+function groupBy(items, key) {
+  return items.reduce((acc, item) => {
+    const k = item[key];
+    if (!acc[k]) acc[k] = [];
+    acc[k].push(item);
+    return acc;
+  }, {});
+}
+
+function useVocabData() {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await fetch("vocab-data.json", { cache: "no-store" });
+        if (!res.ok) throw new Error("Fetch failed");
+        const json = await res.json();
+        if (!cancelled) setData(json);
+      } catch (e) {
+        if (!cancelled) setError("Could not load vocab-data.json");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return { data, error, loading };
+}
+
+export default function App() {
+  const { data, error, loading } = useVocabData();
+  const [currentGroup, setCurrentGroup] = useState(null);
+  const [idx, setIdx] = useState(0);
+  const [revealed, setRevealed] = useState(false);
+
+  const { groupsMap, groupNumbers } = useMemo(() => {
+    if (!data) return { groupsMap: {}, groupNumbers: [] };
+    const sorted = [...data].sort((a, b) => a.key - b.key);
+    const gmap = groupBy(sorted, "group");
+    const gnums = Object.keys(gmap)
+      .map(Number)
+      .sort((a, b) => a - b);
+    return { groupsMap: gmap, groupNumbers: gnums };
+  }, [data]);
+
+  const groupItems = useMemo(() => {
+    if (currentGroup == null || !groupsMap[currentGroup]) return [];
+    return [...groupsMap[currentGroup]].sort((a, b) => a.key - b.key);
+  }, [currentGroup, groupsMap]);
+
+  const total = groupItems.length;
+  const current = total > 0 ? groupItems[idx] : null;
+
+  function resetToGroups() {
+    setCurrentGroup(null);
+    setIdx(0);
+    setRevealed(false);
+  }
+
+  function goPrev() {
+    setIdx((i) => Math.max(0, i - 1));
+    setRevealed(false);
+  }
+  function goNext() {
+    setIdx((i) => Math.min(total - 1, i + 1));
+    setRevealed(false);
+  }
+
+  useEffect(() => {
+    function onKey(e) {
+      if (currentGroup == null) return;
+      if (e.key === "ArrowRight") goNext();
+      if (e.key === "ArrowLeft") goPrev();
+      if (e.key === " ") {
+        e.preventDefault();
+        setRevealed((r) => !r);
+      }
+      if (e.key === "Escape") resetToGroups();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [currentGroup, total]);
+
+  return (
+    <div className="min-h-screen bg-gray-50 text-gray-900">
+      <header className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-gray-200 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center">
+          <div className="text-xl font-bold tracking-tight text-indigo-700">
+            Vocab Flashcards
+          </div>
+          {data && (
+            <span className="ml-auto text-xs text-gray-500">
+              {data.length.toLocaleString()} words • {groupNumbers.length} groups
+            </span>
+          )}
+        </div>
+      </header>
+
+      <main className="max-w-6xl mx-auto px-4 py-6">
+        {loading && <div className="text-gray-600">Loading…</div>}
+        {!loading && !data && (
+          <div className="text-red-600">{error || "No data loaded."}</div>
+        )}
+
+        {/* Group selection */}
+        {!loading && data && currentGroup == null && (
+          <div>
+            <h2 className="text-lg font-semibold mb-4">Select a Group</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {groupNumbers.map((g) => (
+                <button
+                  key={g}
+                  onClick={() => {
+                    setCurrentGroup(g);
+                    setIdx(0);
+                    setRevealed(false);
+                  }}
+                  className="group rounded-2xl border bg-white p-4 text-left shadow-sm hover:shadow transition"
+                >
+                  <div className="text-sm text-gray-500">Group</div>
+                  <div className="text-2xl font-semibold">{g}</div>
+                  <div className="mt-2 text-xs text-gray-500">
+                    {groupsMap[g]?.length || 0} words
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Flashcard view */}
+        {data && currentGroup != null && (
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <button
+                onClick={resetToGroups}
+                className="text-sm px-3 py-1.5 border rounded-xl bg-white hover:bg-gray-50"
+              >
+                ← All Groups
+              </button>
+              <div className="text-sm text-gray-600">
+                Group {currentGroup} • {idx + 1} / {total}
+              </div>
+            </div>
+
+            <div
+              onClick={() => setRevealed((r) => !r)}
+              className="cursor-pointer select-none mx-auto flex items-center justify-center
+                         w-80 h-80 rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-500 to-teal-400
+                         text-white shadow-xl hover:shadow-2xl transition-transform duration-200 hover:scale-105"
+            >
+              {!current ? (
+                <div className="text-gray-200">No items</div>
+              ) : (
+                <div className="text-center px-4">
+                  <div className="text-3xl md:text-4xl font-bold">
+                    {current.word}
+                  </div>
+                  <div className="mt-2 text-sm opacity-80">
+                    {revealed ? "Click to hide" : "Click to reveal"}
+                  </div>
+
+                  {revealed && (
+                    <div className="mt-4 bg-white/90 text-gray-900 rounded-xl p-4 shadow-inner">
+                      {current.definitions?.map((d, i) => (
+                        <div key={i} className="mb-3">
+                          <div className="text-xs uppercase text-indigo-600">
+                            {d.part_of_speech}
+                          </div>
+                          <div className="mt-1 font-medium">{d.definition}</div>
+                          {d.sentence && (
+                            <div
+                              className="mt-1 text-sm text-gray-700"
+                              dangerouslySetInnerHTML={{ __html: d.sentence }}
+                            />
+                          )}
+                          {!!d.synonyms?.length && (
+                            <div className="mt-1 text-xs text-gray-600">
+                              <span className="font-semibold">Synonyms:</span>{" "}
+                              {d.synonyms.join(", ")}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          ))}
-        </div>
-      )}
+
+            <div className="mt-6 flex items-center justify-between gap-3">
+              <button
+                onClick={goPrev}
+                disabled={idx === 0}
+                className={`px-4 py-2 rounded-xl border shadow-sm bg-white hover:bg-gray-50 ${
+                  idx === 0 ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+              >
+                ← Previous
+              </button>
+              <button
+                onClick={() => setRevealed((r) => !r)}
+                className="px-4 py-2 rounded-xl border shadow-sm bg-white hover:bg-gray-50"
+              >
+                {revealed ? "Hide" : "Reveal"}
+              </button>
+              <button
+                onClick={goNext}
+                disabled={idx >= total - 1}
+                className={`px-4 py-2 rounded-xl border shadow-sm bg-white hover:bg-gray-50 ${
+                  idx >= total - 1 ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+        )}
+      </main>
     </div>
-  )}
-</div>
+  );
+}
