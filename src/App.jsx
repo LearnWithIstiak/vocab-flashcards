@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import Ad from "./Ad";
 
 function groupBy(items, key) {
   return items.reduce((acc, item) => {
@@ -195,7 +196,6 @@ export default function App() {
               {!current ? (
                 <div className="text-gray-200">No items</div>
               ) : !revealed ? (
-                // Show only the word before click
                 <div className="text-center px-4">
                   <div className="text-4xl sm:text-5xl lg:text-6xl font-bold">
                     {current.word}
@@ -205,7 +205,6 @@ export default function App() {
                   </div>
                 </div>
               ) : (
-                // Show meaning after click
                 <div className="text-left px-4 w-full h-full flex flex-col justify-center">
                   <div className="bg-white/90 text-gray-900 rounded-xl p-4 shadow-inner
                                   max-h-56 sm:max-h-72 lg:max-h-96 overflow-y-auto text-sm sm:text-base">
@@ -261,6 +260,11 @@ export default function App() {
                 Next →
               </button>
             </div>
+
+            {/* 🔹 Inline Ad every 5th word */}
+            {idx > 0 && idx % 5 === 0 && (
+              <Ad code="//YOUR-BANNER-CODE.js" id={`inline-ad-${idx}`} />
+            )}
           </div>
         )}
       </main>
