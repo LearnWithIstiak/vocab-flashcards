@@ -263,7 +263,16 @@ export default function App() {
 
             {/* 🔹 Inline Ad every 5th word */}
             {idx > 0 && idx % 5 === 0 && (
-              <Ad code="//YOUR-BANNER-CODE.js" id={`inline-ad-${idx}`} />
+              <Ad code="<script type="text/javascript">
+	atOptions = {
+		'key' : 'b2b044b560047d5f80fd42d5f0e301d6',
+		'format' : 'iframe',
+		'height' : 90,
+		'width' : 728,
+		'params' : {}
+	};
+</script>
+<script type="text/javascript" src="//www.highperformanceformat.com/b2b044b560047d5f80fd42d5f0e301d6/invoke.js"></script>" id={`inline-ad-${idx}`} />
             )}
           </div>
         )}
